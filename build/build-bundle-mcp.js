@@ -14,8 +14,6 @@ import {execSync} from 'child_process';
 import {createRequire} from 'module';
 
 import esbuild from 'esbuild';
-// @ts-expect-error: plugin has no types.
-import SoftNavPlugin from 'lighthouse-plugin-soft-navigation';
 
 import * as plugins from './esbuild-plugins.js';
 import {Runner} from '../core/runner.js';
@@ -85,11 +83,6 @@ function getMcpRequiredGathererNames() {
 const GIT_READABLE_REF =
   execSync(process.env.CI ? 'git rev-parse HEAD' : 'git describe').toString().trim();
 
-// HACK: manually include plugin audits.
-/** @type {Array<string>} */
-// @ts-expect-error
-const softNavAudits = SoftNavPlugin.audits.map(a => a.path);
-
 const today = (() => {
   const date = new Date();
   const year = new Intl.DateTimeFormat('en', {year: 'numeric'}).format(date);
@@ -151,12 +144,6 @@ async function buildBundle(entryPath, distPath) {
     '../computed/entity-classification.js',
     '../computed/trace-engine-result.js',
   ];
-
-  // Include plugins.
-  dynamicModulePaths.push('lighthouse-plugin-soft-navigation');
-  softNavAudits.forEach(softNavAudit => {
-    dynamicModulePaths.push(softNavAudit);
-  });
 
   // Add all other audits and gatherers to dynamicModulePaths so they're in the bundledModules map.
   // They will be shimmed by lighthouseShimPlugin.
