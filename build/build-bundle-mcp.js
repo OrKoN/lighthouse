@@ -14,8 +14,6 @@ import {execSync} from 'child_process';
 import {createRequire} from 'module';
 
 import esbuild from 'esbuild';
-// @ts-expect-error: plugin has no types.
-import SoftNavPlugin from 'lighthouse-plugin-soft-navigation';
 
 import * as plugins from './esbuild-plugins.js';
 import {Runner} from '../core/runner.js';
@@ -85,11 +83,6 @@ function getMcpRequiredGathererNames() {
 const GIT_READABLE_REF =
   execSync(process.env.CI ? 'git rev-parse HEAD' : 'git describe').toString().trim();
 
-// HACK: manually include plugin audits.
-/** @type {Array<string>} */
-// @ts-expect-error
-const softNavAudits = SoftNavPlugin.audits.map(a => a.path);
-
 const today = (() => {
   const date = new Date();
   const year = new Intl.DateTimeFormat('en', {year: 'numeric'}).format(date);
@@ -151,12 +144,6 @@ async function buildBundle(entryPath, distPath) {
     '../computed/entity-classification.js',
     '../computed/trace-engine-result.js',
   ];
-
-  // Include plugins.
-  dynamicModulePaths.push('lighthouse-plugin-soft-navigation');
-  softNavAudits.forEach(softNavAudit => {
-    dynamicModulePaths.push(softNavAudit);
-  });
 
   // Add all other audits and gatherers to dynamicModulePaths so they're in the bundledModules map.
   // They will be shimmed by lighthouseShimPlugin.
@@ -262,58 +249,6 @@ async function buildBundle(entryPath, distPath) {
     }
     export const TraceEngineResultComputed = makeComputedArtifact(TraceEngineResult, null);
   `;
-
-  shimsObj['@paulirish/trace_engine'] = `
-    export const LanternComputationData = {};
-    export const Processor = {TraceProcessor: class {}};
-    export const Handlers = {ModelHandlers: {}};
-    export const Insights = {};
-    export const Helpers = {};
-  `;
-  shimsObj['@paulirish/trace_engine/models/trace/lantern/lantern.js'] = `
-    import * as Core from "./core/core.js";
-    import * as Graph from "./graph/graph.js";
-    import * as Metrics from "./metrics/metrics.js";
-    import * as Simulation from "./simulation/simulation.js";
-    import * as Types from "./types/types.js";
-    export {Core, Graph, Metrics, Simulation, Types};
-  `;
-  shimsObj['@paulirish/trace_engine/models/trace/lantern/core/core.js'] =
-    'export const NetworkAnalyzer = {analyze: () => ({}), findResourceForUrl: () => {}, ' +
-    'resolveRedirects: r => r, findMainResource: r => r[0]}; ' +
-    'export const LanternError = class extends Error {};';
-  shimsObj['@paulirish/trace_engine/models/trace/lantern/graph/graph.js'] =
-    'export const PageDependencyGraph = {getNetworkInitiators: () => []}; ' +
-    'export const BaseNode = {types: {NETWORK: "network", CPU: "cpu"}};';
-  shimsObj['@paulirish/trace_engine/models/trace/lantern/metrics/metrics.js'] = `
-    export class FirstContentfulPaint {}
-    export class Interactive {}
-    export class SpeedIndex {}
-    export class LargestContentfulPaint {}
-    export class FirstMeaningfulPaint {}
-    export class TotalBlockingTime {}
-    export class MaxPotentialFID {}
-    export const TBTUtils = {calculateSumOfBlockingTime: () => 0};
-  `;
-  shimsObj['@paulirish/trace_engine/models/trace/lantern/simulation/simulation.js'] = `
-    export const Constants = {
-      throttling: {
-        mobileSlow4G: {
-          rttMs: 150, throughputKbps: 1638.4, requestLatencyMs: 562.5,
-          downloadThroughputKbps: 1474.56, uploadThroughputKbps: 675, cpuSlowdownMultiplier: 4,
-        },
-        desktopDense4G: {
-          rttMs: 40, throughputKbps: 10240, cpuSlowdownMultiplier: 1,
-          requestLatencyMs: 0, downloadThroughputKbps: 0, uploadThroughputKbps: 0,
-        },
-      }
-    };
-    export class Simulator {
-      static createSimulator() { return new Simulator(); }
-      static get allNodeTimings() { return new Map(); }
-    }
-  `;
-  shimsObj['@paulirish/trace_engine/models/trace/lantern/types/types.js'] = 'export default {};';
 
   const result = await esbuild.build({
     entryPoints: [entryPath],
