@@ -220,5 +220,5 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: Smokehouse (devtools-mcp)
+        name: Smokehouse (devtools-mcp) ${{ matrix.smoke-test-shard }}
         path: .tmp/smokehouse-failures/
