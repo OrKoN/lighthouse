@@ -201,6 +201,7 @@ async function buildBundle(entryPath, distPath) {
     '@sentry/node',
     'source-map',
     'ws',
+    'puppeteer-core',
   ];
   for (const modulePath of modulesToIgnore) shimsObj[modulePath] = 'export default {}';
 
@@ -267,7 +268,6 @@ async function buildBundle(entryPath, distPath) {
     keepNames: true,
     inject: ['./build/process-global.js'],
     legalComments: 'inline',
-    external: ['debug', 'puppeteer-core'],
     alias: {
       'debug': require.resolve('debug/src/browser.js'),
       'lighthouse-logger': require.resolve('../lighthouse-logger/index.js'),
